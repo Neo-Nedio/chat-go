@@ -5,6 +5,7 @@ go 1.27
 require (
 	github.com/bwmarrin/snowflake v0.3.0
 	github.com/golang-jwt/jwt/v4 v4.5.2
+	github.com/pkg/errors v0.9.1
 	github.com/redis/go-redis/v9 v9.14.0
 	github.com/zeromicro/go-zero v1.9.0
 	github.com/zeromicro/x v0.0.0-20240408115609-8224c482b07e
