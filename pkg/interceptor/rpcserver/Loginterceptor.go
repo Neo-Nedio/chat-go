@@ -15,19 +15,21 @@ func LogInterceptor(ctx context.Context,
 	req any,
 	info *grpc.UnaryServerInfo,
 	handler grpc.UnaryHandler) (resp any, err error) {
-	//先调真正的业务逻辑，拿到结果和错误
+
 	resp, err = handler(ctx, req)
 	if err == nil {
-		return resp, err
+		return resp, nil
 	}
 
-	//取出最内层的原始错误。因为你务里可能用 errors.Wrapf 包装过，Cause 能剥掉包装，拿到 xerr 定义的原始错误。
-	causeErr := errors.Cause(err)
+	// 先记原始错误，带方法名
+	logx.WithContext(ctx).Errorf("【RPC SRV ERR】method=%s err=%v", info.FullMethod, err)
+
+	// 业务错误 → 转 gRPC status
 	var e *zerr.CodeMsg
-	if errors.As(causeErr, &e) {
-		err = status.Error(codes.Code(e.Code), e.Msg)
+	if errors.As(err, &e) {
+		return nil, status.Error(codes.Code(e.Code), e.Msg)
 	}
 
-	logx.WithContext(ctx).Errorf("『 RPC SRV ERR 』%v", err)
-	return
+	// 非业务错误 → 通用错误，不暴露内部细节
+	return nil, status.Error(codes.Internal, "internal error")
 }
