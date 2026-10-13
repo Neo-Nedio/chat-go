@@ -34,8 +34,8 @@ message LoginResp{
 
 message RegisterReq{
   string phone = 1;
-  string password = 3;
-  string nickname = 2;
+  string  nickname = 2;
+  string  password = 3;
   string avatar = 4;
   int32 sex =5;
 }
@@ -46,7 +46,7 @@ message RegisterResp{
 }
 
 message GetUserInfoReq{
-  string user = 1;
+  string id = 1;
 }
 
 message GetUserInfoResp{
@@ -58,14 +58,18 @@ message FindUserReq{
   string phone =2;
   repeated string ids =3 ;
 }
-message FindUserResp{
-  repeated UserEntity users = 1;
+message FindUserResp {
+  repeated UserEntity user = 1;
 }
 
-service User{
-  rpc Ping(Request) returns(Response);
-  rpc Login(LoginReq) returns(LoginResp);
-  rpc Register(RegisterReq) returns(RegisterResp);
-  rpc GetUserInfo(GetUserInfoReq) returns(GetUserInfoResp);
-  rpc FindUser(FindUserReq) returns(FindUserResp);
+service User {
+  rpc Ping(Request) returns (Response);
+
+  rpc Login(LoginReq) returns (LoginResp);
+
+  rpc Register(RegisterReq) returns (RegisterResp);
+
+  rpc GetUserInfo(GetUserInfoReq) returns (GetUserInfoResp);
+
+  rpc FindUser(FindUserReq) returns (FindUserResp);
 }

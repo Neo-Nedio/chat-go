@@ -1,17 +1,18 @@
 package logic
 
 import (
-	"chat-go/apps/user/rpc/models"
-	"chat-go/pkg/xerr"
+	"chat-go/apps/user/models"
 	"context"
 
 	"chat-go/apps/user/rpc/internal/svc"
 	"chat-go/apps/user/rpc/user"
 
+	"github.com/jinzhu/copier"
 	"github.com/pkg/errors"
 	"github.com/zeromicro/go-zero/core/logx"
-	"gorm.io/gorm"
 )
+
+var ErrUserNotFound = errors.New("这个用户没有")
 
 type GetUserInfoLogic struct {
 	ctx    context.Context
@@ -28,41 +29,18 @@ func NewGetUserInfoLogic(ctx context.Context, svcCtx *svc.ServiceContext) *GetUs
 }
 
 func (l *GetUserInfoLogic) GetUserInfo(in *user.GetUserInfoReq) (*user.GetUserInfoResp, error) {
-	users := make([]models.User, 0, 1)
-	ids := []string{in.User}
 
-	err := l.svcCtx.CSvc.GetUserByIds(&users, ids)
-	switch {
-	case err == nil:
-		// 查到，继续
-	case errors.Is(err, gorm.ErrRecordNotFound):
-		return nil, errors.WithStack(xerr.IdNotFound)
-	default:
-		return nil, errors.Wrapf(xerr.NewDBErr(), "find user by id err %v, id %v", err, in.User)
+	userEntiy, err := l.svcCtx.UsersModel.FindOne(l.ctx, in.Id)
+	if err != nil {
+		if err == models.ErrNotFound {
+			return nil, ErrUserNotFound
+		}
+		return nil, err
+	}
+	var resp user.UserEntity
+	if err := copier.Copy(&resp, userEntiy); err != nil {
+		return nil, err
 	}
 
-	if len(users) == 0 {
-		return nil, errors.WithStack(xerr.IdNotFound)
-	}
-
-	ur := users[0]
-
-	var status, sex int32
-	if ur.Status != nil {
-		status = int32(*ur.Status)
-	}
-	if ur.Sex != nil {
-		sex = int32(*ur.Sex)
-	}
-
-	userEntity := user.UserEntity{
-		Id:       ur.ID,
-		Avatar:   ur.Avatar,
-		Nickname: ur.Nickname,
-		Phone:    ur.Phone,
-		Status:   status,
-		Sex:      sex,
-	}
-
-	return &user.GetUserInfoResp{User: &userEntity}, nil
+	return &user.GetUserInfoResp{User: &resp}, nil
 }

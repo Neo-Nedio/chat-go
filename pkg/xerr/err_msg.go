@@ -13,3 +13,10 @@ func ErrMsg(code int) string {
 	}
 	return codeText[SERVER_COMMON_ERROR]
 }
+
+// IsBusinessCode reports whether code is one of the explicitly registered
+// application business error codes.
+func IsBusinessCode(code int) bool {
+	_, ok := codeText[code]
+	return ok
+}

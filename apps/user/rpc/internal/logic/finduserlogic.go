@@ -1,11 +1,13 @@
 package logic
 
 import (
+	"chat-go/apps/user/models"
 	"context"
 
 	"chat-go/apps/user/rpc/internal/svc"
 	"chat-go/apps/user/rpc/user"
 
+	"github.com/jinzhu/copier"
 	"github.com/zeromicro/go-zero/core/logx"
 )
 
@@ -24,7 +26,33 @@ func NewFindUserLogic(ctx context.Context, svcCtx *svc.ServiceContext) *FindUser
 }
 
 func (l *FindUserLogic) FindUser(in *user.FindUserReq) (*user.FindUserResp, error) {
-	// todo: add your logic here and delete this line
 
-	return &user.FindUserResp{}, nil
+	var (
+		userEntitys []*models.Users
+		err         error
+	)
+
+	if in.Phone != "" {
+		userEntity, err := l.svcCtx.UsersModel.FindByPhone(l.ctx, in.Phone)
+		if err == nil {
+			userEntitys = append(userEntitys, userEntity)
+		}
+	} else if in.Name != "" {
+		userEntitys, err = l.svcCtx.UsersModel.ListByName(l.ctx, in.Name)
+	} else if len(in.Ids) > 0 {
+		userEntitys, err = l.svcCtx.UsersModel.ListByIds(l.ctx, in.Ids)
+	}
+
+	if err != nil {
+		return nil, err
+	}
+
+	var resp []*user.UserEntity
+	if err := copier.Copy(&resp, &userEntitys); err != nil {
+		return nil, err
+	}
+
+	return &user.FindUserResp{
+		User: resp,
+	}, nil
 }

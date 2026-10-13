@@ -4,6 +4,7 @@
 package main
 
 import (
+	"chat-go/pkg/resultx"
 	"flag"
 	"fmt"
 
@@ -13,6 +14,7 @@ import (
 
 	"github.com/zeromicro/go-zero/core/conf"
 	"github.com/zeromicro/go-zero/rest"
+	"github.com/zeromicro/go-zero/rest/httpx"
 )
 
 var configFile = flag.String("f", "etc/user.yaml", "the config file")
@@ -28,6 +30,9 @@ func main() {
 
 	ctx := svc.NewServiceContext(c)
 	handler.RegisterHandlers(server, ctx)
+
+	httpx.SetErrorHandlerCtx(resultx.ErrHandler(c.Name))
+	httpx.SetOkHandler(resultx.OkHandler)
 
 	fmt.Printf("Starting server at %s:%d...\n", c.Host, c.Port)
 	server.Start()

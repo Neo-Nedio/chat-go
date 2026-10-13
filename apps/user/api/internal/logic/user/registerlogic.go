@@ -4,11 +4,13 @@
 package user
 
 import (
+	"chat-go/apps/user/rpc/user"
 	"context"
 
 	"chat-go/apps/user/api/internal/svc"
 	"chat-go/apps/user/api/internal/types"
 
+	"github.com/jinzhu/copier"
 	"github.com/zeromicro/go-zero/core/logx"
 )
 
@@ -28,7 +30,19 @@ func NewRegisterLogic(ctx context.Context, svcCtx *svc.ServiceContext) *Register
 }
 
 func (l *RegisterLogic) Register(req *types.RegisterReq) (resp *types.RegisterResp, err error) {
-	// todo: add your logic here and delete this line
+	registerResp, err := l.svcCtx.User.Register(l.ctx, &user.RegisterReq{
+		Phone:    req.Phone,
+		Nickname: req.Nickname,
+		Password: req.Password,
+		Avatar:   req.Avatar,
+		Sex:      int32(req.Sex),
+	})
+	if err != nil {
+		return nil, err
+	}
 
-	return
+	var res types.RegisterResp
+	copier.Copy(&res, registerResp)
+
+	return &res, nil
 }

@@ -1,6 +1,7 @@
 package rpcserver
 
 import (
+	"chat-go/pkg/xerr"
 	"context"
 
 	"github.com/pkg/errors"
@@ -26,7 +27,7 @@ func LogInterceptor(ctx context.Context,
 
 	// 业务错误 → 转 gRPC status
 	var e *zerr.CodeMsg
-	if errors.As(err, &e) {
+	if errors.As(err, &e) && xerr.IsBusinessCode(e.Code) {
 		return nil, status.Error(codes.Code(e.Code), e.Msg)
 	}
 

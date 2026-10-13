@@ -1,13 +1,12 @@
 package logic
 
 import (
-	"chat-go/apps/user/rpc/models"
+	"chat-go/apps/user/models"
 	"chat-go/pkg/ctxdata"
 	encrypt "chat-go/pkg/encrypy"
-	"chat-go/pkg/suid"
-	"chat-go/pkg/utils"
-	"chat-go/pkg/xerr"
+	"chat-go/pkg/wuid"
 	"context"
+	"database/sql"
 	"time"
 
 	"chat-go/apps/user/rpc/internal/svc"
@@ -15,7 +14,10 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/zeromicro/go-zero/core/logx"
-	"gorm.io/gorm"
+)
+
+var (
+	ErrPhoneIsRegister = errors.New("手机号已经注册过")
 )
 
 type RegisterLogic struct {
@@ -33,52 +35,50 @@ func NewRegisterLogic(ctx context.Context, svcCtx *svc.ServiceContext) *Register
 }
 
 func (l *RegisterLogic) Register(in *user.RegisterReq) (*user.RegisterResp, error) {
-	u := models.User{}
-
-	// 1. 检查用户是否存在
-	err := l.svcCtx.CSvc.GetUserByPhone(&u, in.Phone)
-	switch {
-	case err == nil:
-		return nil, xerr.New(xerr.ServerCommonError, "phone already exists")
-	case errors.Is(err, gorm.ErrRecordNotFound):
-		// 查不到，继续
-	default:
-		return nil, errors.Wrapf(xerr.NewDBErr(), "find user by phone err %v, phone %v", err, in.Phone)
+	// 1. 验证用户是否注册，根据手机号码验证
+	userEntity, err := l.svcCtx.UsersModel.FindByPhone(l.ctx, in.Phone)
+	if err != nil && !errors.Is(err, models.ErrNotFound) {
+		return nil, err
 	}
 
-	// 2. 构造新用户
-	newUser := &models.User{
-		ID:       suid.GenerateID(),
+	if userEntity != nil {
+		return nil, ErrPhoneIsRegister
+	}
+
+	// 定义用户数据
+	userEntity = &models.Users{
+		Id:       wuid.GenUid(l.svcCtx.Config.Mysql.DataSource),
 		Avatar:   in.Avatar,
 		Nickname: in.Nickname,
 		Phone:    in.Phone,
-		Status:   utils.ConvertToInt8(0),
-		Sex:      utils.ConvertToInt8(in.Sex),
+		Sex: sql.NullInt64{
+			Int64: int64(in.Sex),
+			Valid: true,
+		},
 	}
 
-	if in.Password != "" {
-		pass, hashErr := encrypt.GenPasswordHash([]byte(in.Password))
-		if hashErr != nil {
-			return nil, errors.Wrapf(xerr.NewServerCommonErr(), "passwordHash gen err %v", hashErr)
+	if len(in.Password) > 0 {
+		genPassword, err := encrypt.GenPasswordHash([]byte(in.Password))
+		if err != nil {
+			return nil, err
 		}
-		newUser.Password = string(pass)
+		userEntity.Password = sql.NullString{
+			String: string(genPassword),
+			Valid:  true,
+		}
 	}
 
-	// 3. 保存
-	if err := l.svcCtx.CSvc.CreateUser(newUser); err != nil {
-		return nil, errors.Wrapf(xerr.NewDBErr(), "save user failed, req %v, err %v", in, err)
-	}
-
-	// 4. 生成 token
-	now := time.Now().Unix()
-	token, err := ctxdata.GetJwtToken(
-		l.svcCtx.Config.Jwt.AccessSecret,
-		now,
-		l.svcCtx.Config.Jwt.AccessExpire,
-		newUser.ID,
-	)
+	_, err = l.svcCtx.UsersModel.Insert(l.ctx, userEntity)
 	if err != nil {
-		return nil, errors.Wrapf(xerr.NewServerCommonErr(), "gen jwt token err %v, phone %v", err, in.Phone)
+		return nil, err
+	}
+
+	// 生成token
+	now := time.Now().Unix()
+	token, err := ctxdata.GetJwtToken(l.svcCtx.Config.Jwt.AccessSecret, now, l.svcCtx.Config.Jwt.AccessExpire,
+		userEntity.Id)
+	if err != nil {
+		return nil, err
 	}
 
 	return &user.RegisterResp{

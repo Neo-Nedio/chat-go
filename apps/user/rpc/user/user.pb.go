@@ -310,8 +310,8 @@ func (x *LoginResp) GetExpire() int64 {
 type RegisterReq struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Phone         string                 `protobuf:"bytes,1,opt,name=phone,proto3" json:"phone,omitempty"`
-	Password      string                 `protobuf:"bytes,3,opt,name=password,proto3" json:"password,omitempty"`
 	Nickname      string                 `protobuf:"bytes,2,opt,name=nickname,proto3" json:"nickname,omitempty"`
+	Password      string                 `protobuf:"bytes,3,opt,name=password,proto3" json:"password,omitempty"`
 	Avatar        string                 `protobuf:"bytes,4,opt,name=avatar,proto3" json:"avatar,omitempty"`
 	Sex           int32                  `protobuf:"varint,5,opt,name=sex,proto3" json:"sex,omitempty"`
 	unknownFields protoimpl.UnknownFields
@@ -355,16 +355,16 @@ func (x *RegisterReq) GetPhone() string {
 	return ""
 }
 
-func (x *RegisterReq) GetPassword() string {
+func (x *RegisterReq) GetNickname() string {
 	if x != nil {
-		return x.Password
+		return x.Nickname
 	}
 	return ""
 }
 
-func (x *RegisterReq) GetNickname() string {
+func (x *RegisterReq) GetPassword() string {
 	if x != nil {
-		return x.Nickname
+		return x.Password
 	}
 	return ""
 }
@@ -437,7 +437,7 @@ func (x *RegisterResp) GetExpire() int64 {
 
 type GetUserInfoReq struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	User          string                 `protobuf:"bytes,1,opt,name=user,proto3" json:"user,omitempty"`
+	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -472,9 +472,9 @@ func (*GetUserInfoReq) Descriptor() ([]byte, []int) {
 	return file_apps_user_rpc_user_proto_rawDescGZIP(), []int{7}
 }
 
-func (x *GetUserInfoReq) GetUser() string {
+func (x *GetUserInfoReq) GetId() string {
 	if x != nil {
-		return x.User
+		return x.Id
 	}
 	return ""
 }
@@ -585,7 +585,7 @@ func (x *FindUserReq) GetIds() []string {
 
 type FindUserResp struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Users         []*UserEntity          `protobuf:"bytes,1,rep,name=users,proto3" json:"users,omitempty"`
+	User          []*UserEntity          `protobuf:"bytes,1,rep,name=user,proto3" json:"user,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -620,9 +620,9 @@ func (*FindUserResp) Descriptor() ([]byte, []int) {
 	return file_apps_user_rpc_user_proto_rawDescGZIP(), []int{10}
 }
 
-func (x *FindUserResp) GetUsers() []*UserEntity {
+func (x *FindUserResp) GetUser() []*UserEntity {
 	if x != nil {
-		return x.Users
+		return x.User
 	}
 	return nil
 }
@@ -653,23 +653,23 @@ const file_apps_user_rpc_user_proto_rawDesc = "" +
 	"\x06expire\x18\x02 \x01(\x03R\x06expire\"\x85\x01\n" +
 	"\vRegisterReq\x12\x14\n" +
 	"\x05phone\x18\x01 \x01(\tR\x05phone\x12\x1a\n" +
-	"\bpassword\x18\x03 \x01(\tR\bpassword\x12\x1a\n" +
-	"\bnickname\x18\x02 \x01(\tR\bnickname\x12\x16\n" +
+	"\bnickname\x18\x02 \x01(\tR\bnickname\x12\x1a\n" +
+	"\bpassword\x18\x03 \x01(\tR\bpassword\x12\x16\n" +
 	"\x06avatar\x18\x04 \x01(\tR\x06avatar\x12\x10\n" +
 	"\x03sex\x18\x05 \x01(\x05R\x03sex\"<\n" +
 	"\fRegisterResp\x12\x14\n" +
 	"\x05Token\x18\x01 \x01(\tR\x05Token\x12\x16\n" +
-	"\x06expire\x18\x02 \x01(\x03R\x06expire\"$\n" +
-	"\x0eGetUserInfoReq\x12\x12\n" +
-	"\x04user\x18\x01 \x01(\tR\x04user\"7\n" +
+	"\x06expire\x18\x02 \x01(\x03R\x06expire\" \n" +
+	"\x0eGetUserInfoReq\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\"7\n" +
 	"\x0fGetUserInfoResp\x12$\n" +
 	"\x04user\x18\x01 \x01(\v2\x10.user.UserEntityR\x04user\"I\n" +
 	"\vFindUserReq\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12\x14\n" +
 	"\x05phone\x18\x02 \x01(\tR\x05phone\x12\x10\n" +
-	"\x03ids\x18\x03 \x03(\tR\x03ids\"6\n" +
-	"\fFindUserResp\x12&\n" +
-	"\x05users\x18\x01 \x03(\v2\x10.user.UserEntityR\x05users2\xf9\x01\n" +
+	"\x03ids\x18\x03 \x03(\tR\x03ids\"4\n" +
+	"\fFindUserResp\x12$\n" +
+	"\x04user\x18\x01 \x03(\v2\x10.user.UserEntityR\x04user2\xf9\x01\n" +
 	"\x04User\x12%\n" +
 	"\x04Ping\x12\r.user.Request\x1a\x0e.user.Response\x12(\n" +
 	"\x05Login\x12\x0e.user.LoginReq\x1a\x0f.user.LoginResp\x121\n" +
@@ -705,7 +705,7 @@ var file_apps_user_rpc_user_proto_goTypes = []any{
 }
 var file_apps_user_rpc_user_proto_depIdxs = []int32{
 	0,  // 0: user.GetUserInfoResp.user:type_name -> user.UserEntity
-	0,  // 1: user.FindUserResp.users:type_name -> user.UserEntity
+	0,  // 1: user.FindUserResp.user:type_name -> user.UserEntity
 	1,  // 2: user.User.Ping:input_type -> user.Request
 	3,  // 3: user.User.Login:input_type -> user.LoginReq
 	5,  // 4: user.User.Register:input_type -> user.RegisterReq
