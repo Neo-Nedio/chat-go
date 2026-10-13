@@ -5,11 +5,11 @@ SERVER_TYPE=rpc
 
 # 测试环境配置
 # docker的镜像发布地址
-DOCKER_PERO_TEST=对应的阿里云地址/go-chat-im/${SERVER_NAME}-${SERVER_TYPE}-dev
+DOCKER_REPO_TEST=registry.cn-hangzhou.aliyuncs.com/sai-im/${SERVER_NAME}-${SERVER_TYPE}-dev
 # 测试版本
 VERSION_TEST=$(VERSION)
 # 编译的程序名称
-APP_NAME_TEST=easy-im-${SERVER_NAME}-${SERVER_TYPE}-dev
+APP_NAME_TEST=easy-im-${SERVER_NAME}-${SERVER_TYPE}-test
 
 # 测试下的编译文件
 DOCKER_FILE_TEST=./deploy/dockerfile/Dockerfile_${SERVER_NAME}_${SERVER_TYPE}_dev
@@ -22,10 +22,10 @@ build-test:
 # 镜像的测试标签
 tag-test:
 	@echo 'create tag ${VERSION_TEST}'
-	docker tag ${APP_NAME_TEST} ${DOCKER_PERO_TEST}:${VERSION_TEST}
+	docker tag ${APP_NAME_TEST} ${DOCKER_REPO_TEST}:${VERSION_TEST}
 
 publish-test:
-	@echo 'publish ${VERSION_TEST} to ${DOCKER_PERO_TEST}'
-	docker push ${DOCKER_PERO_TEST}:${VERSION_TEST}
+	@echo 'publish ${VERSION_TEST} to ${DOCKER_REPO_TEST}'
+	docker push $(DOCKER_REPO_TEST):${VERSION_TEST}
 
 release-test: build-test tag-test publish-test

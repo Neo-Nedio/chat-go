@@ -12,5 +12,5 @@ Redisx:
   Pass: test
 
 JwtAuth:
-  AccessSecret: test-chat
+  AccessSecret: chat
   AccessExpire: 864000
