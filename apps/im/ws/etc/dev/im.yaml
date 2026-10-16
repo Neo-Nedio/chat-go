@@ -1,0 +1,14 @@
+Name: chat.ws
+ListenOn: 0.0.0.0:10090
+
+JwtAuth:
+  AccessSecret: chat
+
+Mongo:
+  Url: "mongodb://root:123456@127.0.0.1.24:47017"
+  Db: chat
+
+MsgChatTransfer:
+  Topic: msgChatTransfer
+  Addrs:
+    - 127.0.0.1:9092
