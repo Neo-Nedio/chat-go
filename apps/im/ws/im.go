@@ -7,6 +7,7 @@ import (
 	"chat-go/apps/im/ws/websocket"
 	"flag"
 	"fmt"
+	"time"
 
 	"github.com/zeromicro/go-zero/core/conf"
 )
@@ -26,6 +27,7 @@ func main() {
 	ctx := svc.NewServiceContext(c)
 	srv := websocket.NewServer(c.ListenOn,
 		websocket.WithAuthentication(handler.NewJwtAuth(ctx)),
+		websocket.WithServerMaxConnectionIdle(10*time.Second),
 	)
 	defer srv.Stop()
 

@@ -2,16 +2,18 @@ package user
 
 import (
 	"chat-go/apps/im/ws/internal/svc"
-	websocketx "chat-go/apps/im/ws/websocket"
-
-	"github.com/gorilla/websocket"
+	"chat-go/apps/im/ws/websocket"
 )
 
-func OnLine(srv *svc.ServiceContext) websocketx.HandlerFunc {
-	return func(srv *websocketx.Server, conn *websocket.Conn, msg *websocketx.Message) {
+func OnLine(svcCtx *svc.ServiceContext) websocket.HandlerFunc {
+	return func(srv *websocket.Server, conn *websocket.Conn, msg *websocket.Message) {
 		ids := srv.GetUsers()
 		u := srv.GetUsers(conn)
-		err := srv.Send(websocketx.NewMessage(u[0], ids), conn)
-		srv.Info("err", err)
+		if len(u) == 0 {
+			return
+		}
+		if err := srv.Send(websocket.NewMessage(u[0], ids), conn); err != nil {
+			srv.Error(err)
+		}
 	}
 }
