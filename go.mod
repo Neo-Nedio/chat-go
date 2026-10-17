@@ -11,6 +11,7 @@ require (
 	github.com/redis/go-redis/v9 v9.14.0
 	github.com/zeromicro/go-zero v1.9.0
 	github.com/zeromicro/x v0.0.0-20240408115609-8224c482b07e
+	go.mongodb.org/mongo-driver v1.10.2
 	golang.org/x/crypto v0.40.0
 	google.golang.org/grpc v1.76.0
 	google.golang.org/protobuf v1.36.10

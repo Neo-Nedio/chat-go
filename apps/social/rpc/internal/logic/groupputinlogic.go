@@ -8,7 +8,6 @@ import (
 	"chat-go/pkg/xerr"
 	"context"
 	"database/sql"
-	"errors"
 	"time"
 
 	"github.com/pkg/errors"
