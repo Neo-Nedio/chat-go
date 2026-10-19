@@ -11,7 +11,7 @@ import (
 type Conn struct {
 	idleMu sync.Mutex
 
-	Uid string
+	Uid string // 连接id
 
 	*websocket.Conn
 	s *Server
@@ -19,13 +19,10 @@ type Conn struct {
 	lastRead          time.Time // 最后一次成功读到消息的时间
 	maxConnectionIdle time.Duration
 
-	messageMu sync.Mutex
-	// 读消息队列
-	readMessage []*Message
-	// 记录消息序列化(key：消息id value：具体消息)
-	readMessageSeq map[string]*Message
-	// 该通道用于ACK确认之后将消息发送给任务处理(handlerWrite)
-	message chan *Message
+	messageMu      sync.Mutex
+	readMessage    []*Message          // 解决"顺序"，只有队首处理完（确认通过），才处理下一条
+	readMessageSeq map[string]*Message //  解决"去重 + ACK 进度"
+	message        chan *Message       // 确认后的消息，投给 handlerWrite 处理
 
 	// channel 用来通知当Conn停止时相应方法结束
 	done chan struct{}
@@ -52,6 +49,46 @@ func NewConn(s *Server, w http.ResponseWriter, r *http.Request) *Conn {
 
 	go conn.keepalive()
 	return conn
+}
+
+/*
+handlerConn（读循环）          readAck（确认）           handlerWrite（业务）
+│                            │                          │
+│ 收到消息                    │                          │
+├─ 开ACK → appendMsgMq ─────▶ readMessage 队列           │
+│                              │ 取队首                  │
+│                              ├─ 发ACK/等ACK            │
+│                              ├─ 确认通过 → 出队         │
+│                              └─ 投 message ───────────▶ │ 从 message 取
+│                                                         └─ 路由到 handler
+└─ 不开ACK → message channel ────────────────────────────▶*/
+
+// appendMsgMq 是消息去重 + 排序的入队逻辑，处理客户端发来的消息，决定"要不要放进待 ACK 队列"。
+func (c *Conn) appendMsgMq(msg *Message) {
+	c.messageMu.Lock()
+	defer c.messageMu.Unlock()
+
+	// 消息 ID 已存在
+	if m, ok := c.readMessageSeq[msg.Id]; ok {
+		if len(c.readMessage) == 0 {
+			return // 队列空，忽略
+		}
+		if msg.AckSeq <= m.AckSeq {
+			return // ACK 没前进 → 重复，丢弃
+		}
+		c.readMessageSeq[msg.Id] = msg // ACK 前进 → 更新 map
+		return
+	}
+
+	// 新消息但是 ACK 帧 → 多余 ACK，丢弃
+	if msg.FrameType == FrameAck {
+		return
+	}
+
+	// 新消息 → 入队 + 记录
+	c.readMessage = append(c.readMessage, msg)
+	c.readMessageSeq[msg.Id] = msg
+
 }
 
 // ReadMessage 只在成功读到消息时刷新 lastRead
