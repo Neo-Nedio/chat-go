@@ -24,11 +24,13 @@ func Chat(svc *svc.ServiceContext) websocket.HandlerFunc {
 		}
 		switch data.ChatType {
 		case constants.SingleChatType:
+			// 记录消息
 			err := logic.NewConversation(context.Background(), srv, svc).SingleChat(&data, conn.Uid)
 			if err != nil {
 				srv.Send(websocket.NewErrMessage(err), conn)
 				return
 			}
+			// 发送消息
 			srv.SendByUserId(websocket.NewMessage(conn.Uid, ws.Chat{
 				ConversationId: data.ConversationId,
 				ChatType:       data.ChatType,

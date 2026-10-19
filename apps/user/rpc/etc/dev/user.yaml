@@ -16,6 +16,7 @@ Cache:
 
 Redisx:
   Host: 127.0.0.1:16379
+  Type: node
   Pass: test
 
 Jwt:
