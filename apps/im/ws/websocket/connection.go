@@ -19,6 +19,14 @@ type Conn struct {
 	lastRead          time.Time // 最后一次成功读到消息的时间
 	maxConnectionIdle time.Duration
 
+	messageMu sync.Mutex
+	// 读消息队列
+	readMessage []*Message
+	// 记录消息序列化(key：消息id value：具体消息)
+	readMessageSeq map[string]*Message
+	// 该通道用于ACK确认之后将消息发送给任务处理(handlerWrite)
+	message chan *Message
+
 	// channel 用来通知当Conn停止时相应方法结束
 	done chan struct{}
 }
@@ -35,7 +43,11 @@ func NewConn(s *Server, w http.ResponseWriter, r *http.Request) *Conn {
 		s:                 s,
 		lastRead:          time.Now(),              // 连接建立即算活跃，给一个完整超时窗口
 		maxConnectionIdle: s.opt.maxConnectionIdle, // 从选项取值，修掉写死默认值的 bug
-		done:              make(chan struct{}),
+		readMessage:       make([]*Message, 0, 2),
+		readMessageSeq:    make(map[string]*Message, 2),
+		//✨通道大小设置为1：可以减少数据投递中的阻塞情况，也可以保障这个收和发的执行的顺序问题
+		message: make(chan *Message, 1),
+		done:    make(chan struct{}),
 	}
 
 	go conn.keepalive()
