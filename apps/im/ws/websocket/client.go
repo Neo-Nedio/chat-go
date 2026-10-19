@@ -7,6 +7,7 @@ import (
 	"github.com/gorilla/websocket"
 )
 
+// 后端内部使用的client，前端连结在server
 type Client interface {
 	Close() error
 

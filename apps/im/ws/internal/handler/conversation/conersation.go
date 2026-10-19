@@ -1,12 +1,11 @@
 package conversation
 
 import (
-	"chat-go/apps/im/ws/internal/logic"
 	"chat-go/apps/im/ws/internal/svc"
 	"chat-go/apps/im/ws/websocket"
 	"chat-go/apps/im/ws/ws"
+	"chat-go/apps/task/mq/mq"
 	"chat-go/pkg/constants"
-	"context"
 	"time"
 
 	"github.com/mitchellh/mapstructure"
@@ -24,21 +23,20 @@ func Chat(svc *svc.ServiceContext) websocket.HandlerFunc {
 		}
 		switch data.ChatType {
 		case constants.SingleChatType:
-			// 记录消息
-			err := logic.NewConversation(context.Background(), srv, svc).SingleChat(&data, conn.Uid)
-			if err != nil {
-				srv.Send(websocket.NewErrMessage(err), conn)
-				return
-			}
-			// 发送消息
-			srv.SendByUserId(websocket.NewMessage(conn.Uid, ws.Chat{
+			//交给kafka，让他记录消息到数据库，并且重新调用wsClient发送消息
+			err := svc.MsgChatTransferClient.Push(&mq.MsgChatTransfer{
 				ConversationId: data.ConversationId,
 				ChatType:       data.ChatType,
 				SendId:         conn.Uid,
 				RecvId:         data.RecvId,
-				SendTime:       time.Now().UnixMilli(),
-				Msg:            data.Msg,
-			}), data.RecvId)
+				SendTime:       time.Now().UnixNano(),
+				MType:          data.Msg.MType,
+				Content:        data.Msg.Content,
+			})
+			if err != nil {
+				srv.Send(websocket.NewErrMessage(err), conn)
+				return
+			}
 		}
 	}
 }
