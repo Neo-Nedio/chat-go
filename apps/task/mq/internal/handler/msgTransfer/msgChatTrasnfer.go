@@ -13,6 +13,7 @@ import (
 	"github.com/zeromicro/go-zero/core/logx"
 )
 
+// 用来从kafka中华取出消息消费
 type MsgChatTransfer struct {
 	logx.Logger
 	svc *svc.ServiceContext
