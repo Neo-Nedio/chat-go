@@ -212,8 +212,8 @@ func (s *Server) AddRoutes(rs []Route) {
 }
 
 func (s *Server) Start() {
-	http.HandleFunc(s.patten, s.ServerWs)
-	s.Info(http.ListenAndServe(s.addr, nil))
+	http.HandleFunc(s.patten, s.ServerWs)    // 第 1 步：注册路由（只管路径）
+	s.Info(http.ListenAndServe(s.addr, nil)) // 第 2 步：监听端口（只管地址）
 }
 
 func (s *Server) Stop() {
