@@ -22,6 +22,7 @@ type ChatLog struct {
 	SendTime       int64              `bson:"sendTime"`
 	Status         int                `bson:"status"`
 
+	// TODO: Fill your own fields
 	UpdateAt time.Time `bson:"updateAt,omitempty" json:"updateAt,omitempty"`
 	CreateAt time.Time `bson:"createAt,omitempty" json:"createAt,omitempty"`
 }
