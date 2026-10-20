@@ -1,7 +1,7 @@
 package svc
 
 import (
-	immodels "chat-go/apps/im/models"
+	"chat-go/apps/im/immodels"
 	"chat-go/apps/im/ws/internal/config"
 	"chat-go/apps/task/mq/mqclient"
 )

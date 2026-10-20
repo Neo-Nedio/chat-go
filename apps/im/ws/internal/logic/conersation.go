@@ -1,7 +1,7 @@
 package logic
 
 import (
-	immodels "chat-go/apps/im/models"
+	"chat-go/apps/im/immodels"
 	"chat-go/apps/im/ws/internal/svc"
 	"chat-go/apps/im/ws/websocket"
 	"chat-go/apps/im/ws/ws"

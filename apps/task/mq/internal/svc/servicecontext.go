@@ -1,7 +1,7 @@
 package svc
 
 import (
-	immodels "chat-go/apps/im/models"
+	"chat-go/apps/im/immodels"
 	"chat-go/apps/im/ws/websocket"
 	"chat-go/apps/task/mq/internal/config"
 	"chat-go/pkg/constants"
