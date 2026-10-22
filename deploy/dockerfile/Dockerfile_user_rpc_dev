@@ -21,8 +21,8 @@ RUN mkdir /$SERVER_NAME && mkdir /$SERVER_NAME/bin && mkdir /$SERVER_NAME/conf
 # 复制编译后的二进制文件
 COPY ./bin/$SERVER_NAME-$SERVER_TYPE /$SERVER_NAME/bin/
 
-# 复制容器专用配置文件。容器内通过 compose 服务名访问依赖服务。
-COPY ./apps/$SERVER_NAME/$SERVER_TYPE/etc/docker/$SERVER_NAME.yaml /$SERVER_NAME/conf/
+# 复制配置文件
+COPY ./apps/$SERVER_NAME/$SERVER_TYPE/etc/dev/$SERVER_NAME.yaml /$SERVER_NAME/conf/
 
 # 为二进制提供执行权限
 RUN chmod +x /$SERVER_NAME/bin/$SERVER_NAME-$SERVER_TYPE
