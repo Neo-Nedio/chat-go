@@ -12,6 +12,7 @@ type Config struct {
 	ListenOn string
 
 	MsgChatTransfer kq.KqConf
+	MsgReadTransfer kq.KqConf
 
 	SocialRpc zrpc.RpcClientConf
 
