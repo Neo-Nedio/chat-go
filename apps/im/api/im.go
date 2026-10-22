@@ -1,6 +1,7 @@
 package main
 
 import (
+	"chat-go/apps/im/api/internal/config"
 	"chat-go/apps/im/api/internal/handler"
 	"chat-go/apps/im/api/internal/svc"
 	"flag"
@@ -10,7 +11,7 @@ import (
 	"github.com/zeromicro/go-zero/rest"
 )
 
-var configFile = flag.String("f", "etc/im.yaml", "the config file")
+var configFile = flag.String("f", "etc/dev/im.yaml", "the config file")
 
 func main() {
 	flag.Parse()
