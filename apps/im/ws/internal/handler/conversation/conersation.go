@@ -6,6 +6,7 @@ import (
 	"chat-go/apps/im/ws/ws"
 	"chat-go/apps/task/mq/mq"
 	"chat-go/pkg/constants"
+	"chat-go/pkg/wuid"
 	"time"
 
 	"github.com/mitchellh/mapstructure"
@@ -21,22 +22,30 @@ func Chat(svc *svc.ServiceContext) websocket.HandlerFunc {
 			srv.Send(websocket.NewErrMessage(err), conn)
 			return
 		}
-		switch data.ChatType {
-		case constants.SingleChatType:
-			//交给kafka，让他记录消息到数据库，并且重新调用wsClient发送消息
-			err := svc.MsgChatTransferClient.Push(&mq.MsgChatTransfer{
-				ConversationId: data.ConversationId,
-				ChatType:       data.ChatType,
-				SendId:         conn.Uid,
-				RecvId:         data.RecvId,
-				SendTime:       time.Now().UnixNano(),
-				MType:          data.Msg.MType,
-				Content:        data.Msg.Content,
-			})
-			if err != nil {
-				srv.Send(websocket.NewErrMessage(err), conn)
-				return
+		// 如果没有传递会话id，则根据聊天类型分别创建会话id
+		if data.ConversationId == "" {
+			switch data.ChatType {
+			case constants.SingleChatType:
+				data.ConversationId = wuid.CombineId(conn.Uid, data.RecvId)
+			case constants.GroupChatType:
+				// 群的会话id就是接收者（群id）
+				data.ConversationId = data.RecvId
+			default:
 			}
+		}
+		//交给kafka，让他记录消息到数据库，并且重新调用wsClient发送消息
+		err := svc.MsgChatTransferClient.Push(&mq.MsgChatTransfer{
+			ConversationId: data.ConversationId,
+			ChatType:       data.ChatType,
+			SendId:         conn.Uid,
+			RecvId:         data.RecvId,
+			SendTime:       time.Now().UnixMilli(),
+			MType:          data.MType,
+			Content:        data.Content,
+		})
+		if err != nil {
+			_ = srv.Send(websocket.NewErrMessage(err), conn)
+			return
 		}
 	}
 }
