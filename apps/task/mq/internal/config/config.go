@@ -14,6 +14,12 @@ type Config struct {
 	MsgChatTransfer kq.KqConf
 	MsgReadTransfer kq.KqConf
 
+	MsgReadHandler struct {
+		GroupMsgReadHandler          int
+		GroupMsgReadRecordDelayTime  int
+		GroupMsgReadRecordDelayCount int
+	}
+
 	SocialRpc zrpc.RpcClientConf
 
 	Redisx redis.RedisConf
