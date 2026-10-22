@@ -3,6 +3,7 @@ package msgTransfer
 import (
 	"chat-go/apps/im/immodels"
 	"chat-go/apps/im/ws/websocket"
+	"chat-go/apps/social/rpc/socialclient"
 	"chat-go/apps/task/mq/internal/svc"
 	"chat-go/apps/task/mq/mq"
 	"chat-go/pkg/constants"
@@ -42,7 +43,42 @@ func (m *MsgChatTransfer) Consume(ctx context.Context, key, value string) error 
 		return err
 	}
 
-	// 推送消息
+	switch data.ChatType {
+	case constants.SingleChatType:
+		return m.single(&data)
+	case constants.GroupChatType:
+		return m.group(ctx, &data)
+	}
+
+	return nil
+}
+
+func (m *MsgChatTransfer) single(data *mq.MsgChatTransfer) error {
+	return m.svc.WsClient.Send(websocket.Message{
+		FrameType: websocket.FrameData,
+		Method:    "push",
+		FormId:    constants.SYSTEM_ROOT_UID, //此处FromId定义为系统角色，用于内部mq消息传递
+		Data:      data,
+	})
+}
+
+func (m *MsgChatTransfer) group(ctx context.Context, data *mq.MsgChatTransfer) error {
+	// 获取群用户id
+	users, err := m.svc.Social.GroupUsers(ctx, &socialclient.GroupUsersReq{
+		GroupId: data.RecvId,
+	})
+	if err != nil {
+		return err
+	}
+	data.RecvIds = make([]string, 0, len(users.List))
+	//fmt.Printf("group user: %+v", users.List)
+	for _, members := range users.List {
+		// 过滤掉发送者自己，避免重复给自己推送一次
+		if members.UserId == data.SendId {
+			continue
+		}
+		data.RecvIds = append(data.RecvIds, members.UserId)
+	}
 	return m.svc.WsClient.Send(websocket.Message{
 		FrameType: websocket.FrameData,
 		Method:    "push",
