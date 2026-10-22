@@ -1,6 +1,7 @@
 package group
 
 import (
+	"chat-go/apps/im/rpc/imclient"
 	"chat-go/apps/social/api/internal/svc"
 	"chat-go/apps/social/api/internal/types"
 	"chat-go/apps/social/rpc/socialclient"
@@ -28,7 +29,7 @@ func (l *CreateGroupLogic) CreateGroup(req *types.GroupCreateReq) (resp *types.G
 	uid := ctxdata.GetUId(l.ctx)
 
 	// 创建群
-	_, err = l.svcCtx.Social.GroupCreate(l.ctx, &socialclient.GroupCreateReq{
+	res, err := l.svcCtx.Social.GroupCreate(l.ctx, &socialclient.GroupCreateReq{
 		Name:       req.Name,
 		Icon:       req.Icon,
 		CreatorUid: uid,
@@ -37,5 +38,15 @@ func (l *CreateGroupLogic) CreateGroup(req *types.GroupCreateReq) (resp *types.G
 		return nil, err
 	}
 
-	return
+	if res.Id == "" {
+		return nil, err
+	}
+
+	// 群创建成功，建立与创建者的会话
+	_, err = l.svcCtx.Im.CreateGroupConversation(l.ctx, &imclient.CreateGroupConversationReq{
+		GroupId:  res.Id,
+		CreateId: uid,
+	})
+
+	return nil, err
 }

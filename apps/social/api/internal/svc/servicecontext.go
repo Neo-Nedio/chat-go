@@ -1,6 +1,7 @@
 package svc
 
 import (
+	"chat-go/apps/im/rpc/imclient"
 	"chat-go/apps/social/api/internal/config"
 	"chat-go/apps/social/rpc/socialclient"
 	"chat-go/apps/user/rpc/userclient"
@@ -13,6 +14,7 @@ type ServiceContext struct {
 
 	socialclient.Social
 	userclient.User
+	imclient.Im
 }
 
 func NewServiceContext(c config.Config) *ServiceContext {
@@ -20,5 +22,6 @@ func NewServiceContext(c config.Config) *ServiceContext {
 		Config: c,
 		Social: socialclient.NewSocial(zrpc.MustNewClient(c.SocialRpc)),
 		User:   userclient.NewUser(zrpc.MustNewClient(c.UserRpc)),
+		Im:     imclient.NewIm(zrpc.MustNewClient(c.ImRpc)),
 	}
 }
