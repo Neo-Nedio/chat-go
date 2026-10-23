@@ -20,6 +20,11 @@ ImRpc:
       - 127.0.0.1:3379
     Key: im.rpc
 
+Redisx:
+  Host: 127.0.0.1:16379
+  Type: node
+  Pass: test
+
 JwtAuth:
   AccessSecret: chat
   AccessExpire: 864000
