@@ -36,7 +36,16 @@ func main() {
 		Configs:        configs,
 		ConfigFilePath: "../etc/conf",
 		LogLevel:       "DEBUG",
-	})).MustLoad(&c)
+	})).MustLoad(&c, func(bytes []byte) error { // 配置更新后的处理
+		//只是打印一下
+		var c config.Config
+		err := configserver.LoadFromJsonBytes(bytes, &c)
+		if err != nil {
+			fmt.Println("config read err :", err)
+		}
+		fmt.Printf(configs, "config has changed : %+v\n", c)
+		return nil
+	})
 	if err != nil {
 		panic(err)
 	}
