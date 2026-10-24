@@ -1,0 +1,94 @@
+#
+# Licensed to the Apache Software Foundation (ASF) under one or more
+# contributor license agreements.  See the NOTICE file distributed with
+# this work for additional information regarding copyright ownership.
+# The ASF licenses this file to You under the Apache License, Version 2.0
+# (the "License"); you may not use this file except in compliance with
+# the License.  You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+
+conf:
+  listen:
+    host: 0.0.0.0        # 容器内监听所有网卡，映射到宿主机 9000
+    port: 9000
+  allow_list:
+    - 0.0.0.0/0          # 容器环境保持全开；生产可收紧
+  etcd:
+    endpoints:
+      - http://etcd:3379 # ← 关键：用 compose 服务名
+    # username: "root"
+    # password: "123456"
+    mtls:
+      key_file: ""
+      cert_file: ""
+      ca_file: ""
+    # prefix: /apisix
+  log:
+    error_log:
+      level: warn
+      file_path:
+        logs/error.log
+    access_log:
+      file_path:
+        logs/access.log
+  security:
+    content_security_policy: "default-src 'self'; script-src 'self' 'unsafe-eval' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; frame-src *"
+
+authentication:
+  secret:
+    secret              # 建议换成固定随机串
+  expire_time: 3600
+  users:
+    - username: admin
+      password: yujie2018        # 建议改强密码
+    - username: user
+      password: yui123679125i5p3190
+
+plugins:
+  - api-breaker
+  - authz-keycloak
+  - basic-auth
+  - batch-requests
+  - consumer-restriction
+  - cors
+  - echo
+  - fault-injection
+  - grpc-transcode
+  - hmac-auth
+  - http-logger
+  - ip-restriction
+  - jwt-auth
+  - kafka-logger
+  - key-auth
+  - limit-conn
+  - limit-count
+  - limit-req
+  - openid-connect
+  - prometheus
+  - proxy-cache
+  - proxy-mirror
+  - proxy-rewrite
+  - redirect
+  - referer-restriction
+  - request-id
+  - request-validation
+  - response-rewrite
+  - serverless-post-function
+  - serverless-pre-function
+  - sls-logger
+  - syslog
+  - tcp-logger
+  - udp-logger
+  - uri-blocker
+  - wolf-rbac
+  - zipkin
+  - server-info
+  - traffic-split
