@@ -15,6 +15,21 @@ import (
 	"google.golang.org/grpc/metadata"
 )
 
+/*
+HTTP 请求
+→ IdempotenceMiddleware.Handler：context 塞 TKey
+→ 业务 handler
+	→ svcCtx.Social.GroupCreate(ctx, ...)
+		→ gRPC 客户端拦截器 DefaultIdempotentClient
+		  → Identify：TKey + method → DKey
+		  → 放进 metadata
+		→ social-rpc 服务端拦截器
+			→ 取 DKey，IsIdempotentMethod 判断
+			→ TryAcquire（Redis SETNX）抢锁
+				├─ 抢到 → 执行 → SaveResp
+				├─ 已执行 → 返回结果
+				└─ 执行中 → DeadlineExceeded*/
+
 type Idempotent interface {
 	// Identify 生成/获取这次请求的唯一标识（幂等 key）
 	Identify(ctx context.Context, method string) string
@@ -31,6 +46,12 @@ var (
 	TKey = "chat-idempotence-task-id"
 	// DKey 设置rpc调度中的rpc请求的标识
 	DKey = "chat-idempotence-dispatch-key"
+	/*	TKey/DKey 的粒度是"一次业务请求"，不是"一次网络调用"。不同业务请求 key 不同，各自抢锁，互不干扰；
+		同一个业务请求的重试共享同一个 TKey，所以 DKey 相同，第二次到达服务端时抢不到锁，幂等才生效。
+		"抢锁不一样"，在"不同请求"场景下是正确行为，在"同一请求重试"场景下 key 是一样的。
+		所以这个幂等是网络重试的幂等，而不是类似与多次支付只计算一次的幂等
+		学习用，实际上这里不需要幂等
+	*/
 )
 
 // ContextWithVal 添加到上下文方便客户端获取

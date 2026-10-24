@@ -5,6 +5,7 @@ import (
 	"chat-go/apps/social/rpc/internal/server"
 	"chat-go/apps/social/rpc/internal/svc"
 	"chat-go/apps/social/rpc/social"
+	"chat-go/pkg/interceptor"
 	"chat-go/pkg/interceptor/rpcserver"
 	"flag"
 	"fmt"
@@ -33,6 +34,8 @@ func main() {
 		}
 	})
 	s.AddUnaryInterceptors(rpcserver.LogInterceptor)
+	//✨ 在客户端传递参数即可，但在服务端需要传递出Redis的配置信息
+	s.AddUnaryInterceptors(interceptor.NewIdempotenceServer(interceptor.NewDefaultIdempotent(c.Cache[0].RedisConf)))
 
 	defer s.Stop()
 
