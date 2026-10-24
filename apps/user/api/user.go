@@ -4,6 +4,7 @@
 package main
 
 import (
+	"chat-go/pkg/configserver"
 	"chat-go/pkg/resultx"
 	"flag"
 	"fmt"
@@ -12,7 +13,6 @@ import (
 	"chat-go/apps/user/api/internal/handler"
 	"chat-go/apps/user/api/internal/svc"
 
-	"github.com/zeromicro/go-zero/core/conf"
 	"github.com/zeromicro/go-zero/rest"
 	"github.com/zeromicro/go-zero/rest/httpx"
 )
@@ -23,7 +23,23 @@ func main() {
 	flag.Parse()
 
 	var c config.Config
-	conf.MustLoad(*configFile, &c)
+	// go-zero配置默认加载方式
+	//conf.MustLoad(*configFile, &c)
+
+	var configs = "user-api.yaml"
+
+	// 配置中心加载方式
+	err := configserver.NewConfigServer(*configFile, configserver.NewSail(&configserver.Config{
+		ETCDEndpoints:  "127.0.0.1:3379",
+		ProjectKey:     "3c46a0407be60a1f00731ab8e9575df2",
+		Namespace:      "user",
+		Configs:        configs,
+		ConfigFilePath: "../etc/conf",
+		LogLevel:       "DEBUG",
+	})).MustLoad(&c)
+	if err != nil {
+		panic(err)
+	}
 
 	server := rest.MustNewServer(c.RestConf)
 	defer server.Stop()

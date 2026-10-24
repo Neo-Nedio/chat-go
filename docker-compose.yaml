@@ -134,6 +134,18 @@ services:
     networks:
       chat:
 
+  sail:
+    image: ccr.ccs.tencentyun.com/hyy-yu/sail:latest
+    container_name: sail
+    ports:
+      - "8108:8108"
+    volumes:
+      - "./components/sail/compose-cfg.toml:/app/cfg.toml"
+    restart: always
+    platform: linux/arm64
+    networks:
+      easy-chat:
+
 
 networks:
   chat:
