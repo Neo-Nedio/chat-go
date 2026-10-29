@@ -1,0 +1,39 @@
+package main
+
+import (
+	"chat-go/apps/im/ws/internal/config"
+	"chat-go/apps/im/ws/internal/handler"
+	"chat-go/apps/im/ws/internal/svc"
+	"chat-go/apps/im/ws/websocket"
+	"flag"
+	"fmt"
+	"time"
+
+	"github.com/zeromicro/go-zero/core/conf"
+)
+
+var configFile = flag.String("f", "etc/dev/im.yaml", "the config file")
+
+func main() {
+	flag.Parse()
+
+	var c config.Config
+	conf.MustLoad(*configFile, &c)
+
+	if err := c.SetUp(); err != nil {
+		panic(err)
+	}
+
+	ctx := svc.NewServiceContext(c)
+	srv := websocket.NewServer(c.ListenOn,
+		websocket.WithAuthentication(handler.NewJwtAuth(ctx)),
+		websocket.WithServerMaxConnectionIdle(10*time.Second),
+		websocket.WithServerAck(websocket.NoAck),
+	)
+	defer srv.Stop()
+
+	handler.RegisterHandlers(srv, ctx)
+
+	fmt.Println("start websocket server at ", c.ListenOn, " ..... ")
+	srv.Start()
+}

@@ -1,0 +1,175 @@
+package interceptor
+
+import (
+	"chat-go/pkg/xerr"
+	"context"
+	"fmt"
+
+	"github.com/pkg/errors"
+	"github.com/zeromicro/go-zero/core/collection"
+	"github.com/zeromicro/go-zero/core/stores/redis"
+	"github.com/zeromicro/go-zero/core/utils"
+
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/metadata"
+)
+
+/*
+HTTP 请求
+→ IdempotenceMiddleware.Handler：context 塞 TKey
+→ 业务 handler
+	→ svcCtx.Social.GroupCreate(ctx, ...)
+		→ gRPC 客户端拦截器 DefaultIdempotentClient
+		  → Identify：TKey + method → DKey
+		  → 放进 metadata
+		→ social-rpc 服务端拦截器
+			→ 取 DKey，IsIdempotentMethod 判断
+			→ TryAcquire（Redis SETNX）抢锁
+				├─ 抢到 → 执行 → SaveResp
+				├─ 已执行 → 返回结果
+				└─ 执行中 → DeadlineExceeded*/
+
+type Idempotent interface {
+	// Identify 生成/获取这次请求的唯一标识（幂等 key）
+	Identify(ctx context.Context, method string) string
+	// IsIdempotentMethod 判断这个方法是否需要幂等处理（不是所有方法都要）
+	IsIdempotentMethod(fullMethod string) bool
+	// TryAcquire 幂等性的验证
+	TryAcquire(ctx context.Context, id string) (resp any, isAcquire bool)
+	// SaveResp 执行完保存结果，供后续重复请求直接返回
+	SaveResp(ctx context.Context, id string, resp any, respErr error) error
+}
+
+var (
+	// TKey 请求任务标识
+	TKey = "chat-idempotence-task-id"
+	// DKey 设置rpc调度中的rpc请求的标识
+	DKey = "chat-idempotence-dispatch-key"
+	/*	TKey/DKey 的粒度是"一次业务请求"，不是"一次网络调用"。不同业务请求 key 不同，各自抢锁，互不干扰；
+		同一个业务请求的重试共享同一个 TKey，所以 DKey 相同，第二次到达服务端时抢不到锁，幂等才生效。
+		"抢锁不一样"，在"不同请求"场景下是正确行为，在"同一请求重试"场景下 key 是一样的。
+		所以这个幂等是网络重试的幂等，而不是类似与多次支付只计算一次的幂等
+		学习用，实际上这里不需要幂等
+	*/
+)
+
+// ContextWithVal 添加到上下文方便客户端获取
+// 给 context 里塞一个唯一请求 ID（UUID），方便整条调用链路上取到这个 ID，用于日志追踪、链路串联
+func ContextWithVal(ctx context.Context) context.Context {
+	// 设置请求id
+	return context.WithValue(ctx, TKey, utils.NewUuid())
+}
+
+// NewIdempotenceClient grpc客户端的拦截器
+// 在每次 gRPC 调用发出前，给请求打上一个“幂等标识”，塞进 metadata，让服务端能识别这是不是同一个请求
+func NewIdempotenceClient(idempotent Idempotent) grpc.UnaryClientInterceptor {
+	return func(ctx context.Context, method string, req, reply any, cc *grpc.ClientConn,
+		invoker grpc.UnaryInvoker, opts ...grpc.CallOption) error {
+		// 获取唯一的key
+		identify := idempotent.Identify(ctx, method)
+		// 在rpc请求中设置头部信息
+		ctx = metadata.NewOutgoingContext(ctx, map[string][]string{
+			DKey: []string{identify},
+		})
+		// 请求
+		return invoker(ctx, method, req, reply, cc, opts...)
+	}
+}
+
+// NewIdempotenceServer grpc服务端的拦截器
+func NewIdempotenceServer(idempotent Idempotent) grpc.UnaryServerInterceptor {
+	return func(ctx context.Context, req any, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (resp any, err error) {
+		// 获取请求id
+		identify := metadata.ValueFromIncomingContext(ctx, DKey)
+		if len(identify) == 0 || !idempotent.IsIdempotentMethod(info.FullMethod) {
+			// 没 key 或不需要幂等，直接执行
+			return handler(ctx, req)
+		}
+
+		fmt.Println("----", "请求进行幂等处理", identify)
+		//isAcquire = true：抢到了执行权，说明这个 key 之前没执行过/没在执行。
+		//isAcquire = false：没抢到，说明 key 已存在（正在执行或已执行完），r 是上次的结果（可能为 nil）
+		r, isAcquire := idempotent.TryAcquire(ctx, identify[0])
+		if isAcquire {
+			resp, err = handler(ctx, req)
+			fmt.Println("---- 执行任务")
+			// 保存执行之后的结果
+			if err := idempotent.SaveResp(ctx, identify[0], resp, err); err != nil {
+				return resp, err
+			}
+			return resp, err
+		}
+		// 任务已经执行完了
+		if r != nil {
+			fmt.Println("----", "任务已经执行完了")
+			return r, nil
+		}
+		// 任务还在执行
+		//🔥注意：因为需要grpc的重试，所以此处需要使用grpc的错误码
+		return nil, errors.WithStack(xerr.New(int(codes.DeadlineExceeded), fmt.Sprintf("存在其他任务在执行"+
+			"id %v", identify[0])))
+	}
+}
+
+// 默认幂等性对象处理实现（实现Idempotent接口中定义的所有方法）
+
+var (
+	DefaultIdempotent       = new(defaultIdempotent)                  // 默认幂等性的对象处理
+	DefaultIdempotentClient = NewIdempotenceClient(DefaultIdempotent) // 默认幂等性的拦截客户端
+)
+
+type defaultIdempotent struct {
+	Redis  *redis.Redis      // 抢锁（SetnxEx）
+	Cache  *collection.Cache // 存结果（内存缓存，1 小时）
+	method map[string]bool   // 哪些方法需要幂等
+}
+
+func NewDefaultIdempotent(c redis.RedisConf) Idempotent {
+	cache, err := collection.NewCache(60 * 60) // 1 小时过期
+	if err != nil {
+		panic(err)
+	}
+	return &defaultIdempotent{
+		Redis: redis.MustNewRedis(c),
+		Cache: cache,
+		method: map[string]bool{
+			// 该路径为类库文件（pb.go）中定义
+			"/social.social/GroupCreate": true,
+		},
+	}
+}
+
+// Identify 获取请求标识
+func (d *defaultIdempotent) Identify(ctx context.Context, method string) string {
+	id := ctx.Value(TKey)
+	// 请求id：key + method
+	rpcId := fmt.Sprintf("%v.%s", id, method)
+	return rpcId
+}
+
+// IsIdempotentMethod 是否支持幂等性
+func (d *defaultIdempotent) IsIdempotentMethod(fullMethod string) bool {
+	return d.method[fullMethod]
+}
+
+// TryAcquire 幂等性的验证处理
+func (d *defaultIdempotent) TryAcquire(ctx context.Context, id string) (resp any, isAcquire bool) {
+	// 基于redis锁实现
+	// 如果存在这个键就返回false
+	retry, err := d.Redis.SetnxEx(id, "1", 60*60)
+	if err != nil {
+		return nil, false
+	}
+	if retry {
+		return nil, true // 抢到了
+	}
+	resp, _ = d.Cache.Get(id) // 没抢到，查缓存里有没有结果
+	return resp, false
+}
+
+// SaveResp 保存执行后的结果
+func (d *defaultIdempotent) SaveResp(ctx context.Context, id string, resp any, respErr error) error {
+	d.Cache.Set(id, resp)
+	return nil
+}

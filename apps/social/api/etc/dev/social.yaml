@@ -1,0 +1,31 @@
+Name: social
+Host: 0.0.0.0
+Port: 8881
+
+SocialRpc:
+  Etcd:
+    Hosts:
+      - 127.0.0.1:3379
+    Key: social.rpc
+
+UserRpc:
+  Etcd:
+    Hosts:
+      - 127.0.0.1:3379
+    Key: user.rpc
+
+ImRpc:
+  Etcd:
+    Hosts:
+      - 127.0.0.1:3379
+    Key: im.rpc
+
+Redisx:
+  Host: 127.0.0.1:16379
+  Type: node
+  Pass: test
+
+JwtAuth:
+  AccessSecret: chat
+  AccessExpire: 864000
+

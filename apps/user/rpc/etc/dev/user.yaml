@@ -1,0 +1,24 @@
+Name: user.rpc
+ListenOn: 0.0.0.0:8080
+Etcd:
+  Hosts:
+  - 127.0.0.1:3379
+  Key: user.rpc
+
+
+Mysql:
+  DataSource: root:123456@tcp(127.0.0.1:13306)/chat-go?charset=utf8mb4&parseTime=true&loc=Asia%2FShanghai
+
+Cache:
+  - Host: 127.0.0.1:16379
+    Type: node
+    Pass: test
+
+Redisx:
+  Host: 127.0.0.1:16379
+  Type: node
+  Pass: test
+
+Jwt:
+  AccessSecret: chat
+  AccessExpire: 864000 # 10天后过期

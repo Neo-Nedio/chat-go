@@ -1,0 +1,47 @@
+Name: task.mq
+ListenOn: 0.0.0.0:10091
+
+# kafka消费者信息
+MsgChatTransfer:
+  Name: MsgChatTransfer
+  Brokers:
+    - 192.168.117.24:9092
+  Group: kafka
+  Topic: msgChatTransfer
+  Offset: first
+  Consumers: 1
+
+MsgReadTransfer:
+  Name: MsgReadTransfer
+  Brokers:
+    - 192.168.117.24:9092
+  Group: kafka
+  Topic: MsgReadTransfer
+  Offset: first
+  Consumers: 1
+
+MsgReadHandler:
+  # 对消息已读未读的缓存是否开启（0：关闭 1：开启）
+  GroupMsgReadHandler: 1
+  # 缓存超时时间
+  GroupMsgReadRecordDelayTime: 5
+  # 缓存时间内消息的最大上限，超过时直接弗发送
+  GroupMsgReadRecordDelayCount: 2
+
+Redisx:
+  Host: 127.0.0.1:16379
+  Type: node
+  Pass: test
+
+SocialRpc:
+  Etcd:
+    Hosts:
+      - 127.0.0.1:3379
+    Key: social.rpc
+
+Mongo:
+  Url: "mongodb://root:123456@127.0.0.1.24:47017"
+  Db: chat
+
+Ws:
+  Host: 127.0.0.1:10090
